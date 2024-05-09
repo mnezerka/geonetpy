@@ -11,6 +11,7 @@ import numpy as np
 import gpxpy.gpx
 from geopy import distance
 
+
 def match(a, b, tolerance):
     """ Matching two GPX-tracks"""
 
@@ -72,13 +73,18 @@ def match(a, b, tolerance):
 
     logging.debug(f'matchiing points: {matching_points}')
 
-    # So now you have points on the GPS trails which cross, but you want to
-    # group points into contiguous segments of track that overlap. For that you
-    # can use the scipy hierarchical clustering methods to group the data into
-    # groups which are linked by at most the TOLERANCE distance.
+    # if there are no points close to each other -> tracks are too far from each other
+    if len(matching_points) > 0:
 
-    clusters = scipy.cluster.hierarchy.fclusterdata(matching_points, tolerance, 'distance')
+        # So now you have points on the GPS trails which cross, but you want to
+        # group points into contiguous segments of track that overlap. For that you
+        # can use the scipy hierarchical clustering methods to group the data into
+        # groups which are linked by at most the TOLERANCE distance.
 
+        clusters = scipy.cluster.hierarchy.fclusterdata(matching_points, tolerance, 'distance')
+    else:
+        clusters = []
+        
     logging.debug(f'clusters: {clusters}')
 
     # clusters is an array of the same length of your matched points containing
