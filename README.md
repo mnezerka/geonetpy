@@ -1,4 +1,4 @@
-# geonetpy 
+# geonetpy
 
 Tools and algorithms for building geographical networks. 
 
@@ -27,11 +27,18 @@ and clusterization algorithm
 
 ### gps coordinates
 
-* lat - angle between the equatorial plane and the straight line that passes through that point and through (or close to) the center of the Earth
-* lng - angle east or west of a reference meridian to another meridian that passes through that point.
+
+* latitude - angle between the equatorial plane and the straight line that
+  passes through that point and through (or close to) the center of the Earth
+  Latitude goes for 0 at the equator to +90 N at the North Pole or -90 S at
+  the South Pole where the angle is also measured from the center of the earth
+
+* longitude - angle east or west of a reference meridian to another meridian
+  that passes through that point. Longitude ranges from 0 to 180 E
+  and 0 to 180 W
 
 Example:
 ```
                     lat           lng
-cleaveland ohio: 41.4996572N, 81.6936772W 
+cleaveland ohio: 41.4996572N, 81.6936772W
 ```
