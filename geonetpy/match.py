@@ -176,17 +176,14 @@ def draw(matches):
 
     plt.show()
 
-def points_from_gpx_file(file_path):
-    """point from gpx file"""
+def points_from_gpx(gpx):
+    """point from gpx object"""
     points = []
 
-    with open(file_path, 'r') as gpx_file:
-        g = gpxpy.parse(gpx_file)
-
-        for track in g.tracks:
-            for segment in track.segments:
-                for point in segment.points:
-                    points.append([point.latitude, point.longitude])
+    for track in gpx.tracks:
+        for segment in track.segments:
+            for point in segment.points:
+                points.append([point.latitude, point.longitude])
 
     return np.array(points)
 
