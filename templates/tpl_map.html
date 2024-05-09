@@ -53,9 +53,16 @@
 
         const styleFunc = function(feature) {
             //console.log(feature)
-            switch (feature.properties.track) {
-                case 0: return {color: "#ff0000"};
-                case 1: return {color: "#0000ff"};
+            if (feature.properties.track !== undefined) {
+                let tstyle = {
+                    opacity: 0.3
+                }
+                switch (feature.properties.track) {
+                    case 0: tstyle.color = "#ff0000"; break;
+                    case 1: tstyle.color = "#0000ff"; break;
+                }
+
+                return tstyle
             }
         } 
         

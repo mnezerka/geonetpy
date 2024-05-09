@@ -4,7 +4,7 @@ Geojson tools
 
 import json
 
-def points_to_geojson(points):
+def points_to_geojson(points, line=False):
     geos = []
 
     for point in points:
@@ -20,6 +20,19 @@ def points_to_geojson(points):
             },
         }
         geos.append(pt)
+
+    if line:
+        poly = {
+            'type': 'Feature',
+            'properties': {
+                'track': 0
+            },
+            'geometry': {
+                'coordinates': [[p[1], p[0]] for p in points],
+                'type': 'LineString'
+            },
+        }
+        geos.append(poly)
 
     geometries = {
         'type': 'FeatureCollection',

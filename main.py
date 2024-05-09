@@ -60,7 +60,7 @@ def interpolate(ctx, max_distance):
 def cmd_html(ctx, output):
     print('number of points in track:', ctx.obj['points'].shape[0])
     print('generating geojson content')
-    geojson_content = geojson.points_to_geojson(ctx.obj['points'])
+    geojson_content = geojson.points_to_geojson(ctx.obj['points'], True)
 
     tpl_path='templates/tpl_map.html'
     print(f'generating html content from template {tpl_path}')
