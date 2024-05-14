@@ -15,11 +15,14 @@ class BallTree:
         self.root = self.build_tree(points)
 
     def build_tree(self, points):
-        if not points:
+        if len(points) == 0:
             return None
 
         # find the median index and point based on latitude
-        points.sort(key=lambda x: x[0])
+
+        # sort by first coordinate
+        points = points[points[:, 0].argsort()]
+
         median_index = len(points) // 2
         median_point = points[median_index]
 

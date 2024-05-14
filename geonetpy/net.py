@@ -5,15 +5,28 @@ from .geojson import point_to_geojson
 from .balltree import BallTree
 
 class Net:
-    def __init__(self):
+    def __init__(self, points=None, edges=[]):
         self.max_spot_distance = 75
         self.last_id = 0
-        self.edges = []
-        self.balltree = None
-        logging.debug('created empty net, max spot distance: %i', self.max_spot_distance)
+        self.edges = edges
+        if points is not None:
+            self.balltree = BallTree(points)
+            logging.debug('created net from existing data, max spot distance: %i', self.max_spot_distance)
+        else:
+            self.balltree = None
+            logging.debug('created empty net, max spot distance: %i', self.max_spot_distance)
 
     def stat(self):
         return f'height of ball tree is: {self.balltree.get_height()}'
+
+    def get_points(self):
+        if self.balltree is None:
+            return []
+
+        return self.balltree.get_points()
+
+    def get_edges(self):
+        return self.edges
 
     def get_id(self):
         result = self.last_id
@@ -25,7 +38,7 @@ class Net:
         logging.debug('storing point: %s', point)
 
         if self.balltree is None:
-            self.balltree = BallTree([point])
+            self.balltree = BallTree(np.array([point]))
         else:
             self.balltree.add_point(point)
 

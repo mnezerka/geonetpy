@@ -9,35 +9,37 @@ def point_to_geojson(point):
     return [point[1], point[0]]
 
 
-def points_to_geojson(points, line=False):
+def tracks_to_geojson(tracks, lines=False):
     geos = []
 
-    for point in points:
+    for track_ix, points in enumerate(tracks):
 
-        pt = {
-            'type': 'Feature',
-            'properties': {
-                'track': 0
-            },
-            'geometry': {
-                'coordinates': [point[1], point[0]],
-                'type': 'Point'
-            },
-        }
-        geos.append(pt)
+        for point in points:
 
-    if line:
-        poly = {
-            'type': 'Feature',
-            'properties': {
-                'track': 0
-            },
-            'geometry': {
-                'coordinates': [[p[1], p[0]] for p in points],
-                'type': 'LineString'
-            },
-        }
-        geos.append(poly)
+            pt = {
+                'type': 'Feature',
+                'properties': {
+                    'track': track_ix
+                },
+                'geometry': {
+                    'coordinates': point_to_geojson(point),
+                    'type': 'Point'
+                },
+            }
+            geos.append(pt)
+
+        if lines:
+            line = {
+                'type': 'Feature',
+                'properties': {
+                    'track': track_ix
+                },
+                'geometry': {
+                    'coordinates': [point_to_geojson(p) for p in points],
+                    'type': 'LineString'
+                },
+            }
+            geos.append(line)
 
     geometries = {
         'type': 'FeatureCollection',

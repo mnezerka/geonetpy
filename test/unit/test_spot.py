@@ -1,7 +1,7 @@
 import unittest
 from geonetpy.spot import Spot, get_centroid
 
-class TestRect(unittest.TestCase):
+class TestSpot(unittest.TestCase):
 
     def test_centoid(self):
         c = get_centroid([[1, 1]])
