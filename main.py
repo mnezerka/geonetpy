@@ -164,16 +164,16 @@ def net_create_cmd(files, output, output_format, max_distance):
             points = interpolation.interpolate_distance(points, max_distance)
             print('number of points in track after interpolation:', points.shape[0])
 
-            last_hull = None
+            last_spot = None
             for point in points:
-                last_hull = n.add_point(point, last_hull)
+                last_spot = n.add_point(point, last_spot)
 
-    print('number of hulls in net:', len(n.hulls))
+    print('number of spots in net:', len(n.spots))
     if output_format == 'html':
         print('generating geojson content')
         geojson_content = n.to_geojson()
 
-        tpl_path='templates/tpl_map.html'
+        tpl_path = 'templates/tpl_map.html'
         print(f'generating html content from template {tpl_path}')
         with open(tpl_path, 'r') as tpl_file:
             tpl = string.Template(tpl_file.read())

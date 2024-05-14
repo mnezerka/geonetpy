@@ -1,119 +1,90 @@
 import json
 import logging
-from .hull4 import Hull4, Vector
 from .geojson import point_to_geojson
+from .spot import Spot
+from .geoutils import haversine_distance
 
 class Net:
     def __init__(self):
-        self.hulls = {}
-        self.sizeTreshold = 0.001
+        self.spots = {}
+        self.max_spot_distance = 15
         self.last_id = 0
         self.edges = []
-        logging.debug(f'created empty net, sizeTreshold={self.sizeTreshold}')
+        logging.debug(f'created empty net, max spot distance: {self.max_spot_distance}')
 
     def get_id(self):
         result = self.last_id
         self.last_id += 1
         return result
 
-    def store_hull(self, hull):
-        self.hulls[hull.id] = hull
+    def store_spot(self, spot):
+        self.spots[spot.id] = spot
 
     def store_edge(self, edge):
         self.edges.append(edge)
 
-    def add_point(self, point, last_hull=None):
-        logging.debug(f'add point: {point}, last_hull: {last_hull.id if last_hull else "-"}')
+    def add_point(self, point, last_spot=None):
+        logging.debug(f'add point: {point}, last_spot: {last_spot.id if last_spot else "-"}')
 
-        new_hull = Hull4.from_vector(Vector.from_point(point), self.get_id())
+        # find nearest neighbor
+        final_spot = None
+        for _, s in self.spots.items():
 
-        # look for existing hull which is close to the point
-        final_hull = None
-        for _, h in self.hulls.items():
+            if s.distance(point) < self.max_spot_distance:
 
-            # try to join existing hull with the new point
-            joined_size = h.estimate_size(new_hull)
-
-            # if joined size is under threshold
-            if joined_size < self.sizeTreshold:
-
-                logging.debug(f'adding to existing hull {h.id}, size: {joined_size}')
-                joined = h.copy()
-                joined.add(new_hull)
-                self.store_hull(joined)
-                final_hull = joined
+                logging.debug(f'adding to existing spot {s.id}')
+                s.add(point)
+                final_spot = s
                 break
 
-        #  no existing hull was close enough -> store newly created one
-        if final_hull is None:
-            logging.debug(f'registering hull {new_hull.id}')
-            self.store_hull(new_hull)
-            final_hull = new_hull
+        #  no existing spot was close enough -> create new one
+        if final_spot is None:
+            final_spot = Spot(self.get_id(), point)
+            logging.debug(f'registering new spot {final_spot.id}')
+            self.store_spot(final_spot)
 
         # --------------------  edge processing
-        if last_hull is not None:
-            # ignore edges between hull itself
-            if last_hull.id != final_hull.id:
-                edge = (last_hull.id, final_hull.id)
-                if edge not in self.edges:
-                    logging.debug(f'adding edge {last_hull.id} - {new_hull.id}')
+        if last_spot is not None:
+            # ignore edges between spot itself
+            if last_spot.id != final_spot.id:
+                edge = (last_spot.id, final_spot.id)
+                edge_reverse = (final_spot.id, last_spot.id)
+                if edge not in self.edges and edge_reverse not in self.edges:
+                    logging.debug(f'adding edge {last_spot.id} - {final_spot.id}')
                     self.store_edge(edge)
 
-        return final_hull
+        return final_spot
 
     def to_geojson(self):
         geos = []
 
         # render hulls
-        for _, h in self.hulls.items():
+        for _, s in self.spots.items():
 
-            r = h.bounding_rect()
-
-            if h.size() == 0:
-
-                rc = r.get_center()
-
-                pnt = {
-                    'type': 'Feature',
-                    'properties': {
-                        'hull': h.id
-                    },
-                    'geometry': {
-                        'coordinates': point_to_geojson(rc),
-                        'type': 'Point'
-                    }
+            pnt = {
+                'type': 'Feature',
+                'properties': {
+                    'spot': s.id
+                },
+                'geometry': {
+                    'coordinates': point_to_geojson(s.center),
+                    'type': 'Point'
                 }
-                geos.append(pnt)
-
-            else:
-
-                poly = {
-                    'type': 'Feature',
-                    'properties': {
-                        'hull': h.id
-                    },
-                    'geometry': {
-                        'coordinates': [[point_to_geojson(p) for p in r.get_corner_points()]],
-                        'type': 'Polygon'
-                    }
-                }
-                geos.append(poly)
+            }
+            geos.append(pnt)
 
         # render edges
         for edge in self.edges:
-            h1 = self.hulls[edge[0]]
-            h2 = self.hulls[edge[1]]
-
-            p1 = h1.bounding_rect().get_center()
-            p2 = h2.bounding_rect().get_center()
+            s1 = self.spots[edge[0]]
+            s2 = self.spots[edge[1]]
 
             line = {
                 'type': 'Feature',
                 'properties': {
-                    'edge': f'{h1.id}-{h2.id}'
+                    'edge': f'{s1.id}-{s2.id}'
                 },
                 'geometry': {
-                    'coordinates': [point_to_geojson(p1), point_to_geojson(p2)],
+                    'coordinates': [point_to_geojson(s1.center), point_to_geojson(s2.center)],
                     'type': 'LineString'
                 }
             }
