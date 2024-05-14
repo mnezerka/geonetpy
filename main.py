@@ -4,8 +4,11 @@ import logging
 import string
 from functools import update_wrapper
 from geonetpy import match, interpolation, geojson
+from geonetpy.net import Net
 import gpxpy.gpx
 import click
+
+DEFAULT_INTERPOLATION_MAX_DISTANCE = 10
 
 @click.group()
 @click.option('--log-level', default='INFO', help='Log level (DEBUG, INFO, ...)')
@@ -37,7 +40,7 @@ def track(ctx):
 @click.pass_context
 def open_cmd(ctx, file):
     """Loads one gpx track for processing."""
-    
+
     click.echo(f"Opening '{file}'")
     with open(file, 'r') as gpx_file:
         gpx = gpxpy.parse(gpx_file)
@@ -45,7 +48,7 @@ def open_cmd(ctx, file):
     ctx.obj['points'].append(points)
 
 @track.command('interpolate')
-@click.option('--max-distance', default=10, show_default=True, help='Maximal distance (in meters) for points interpolation')
+@click.option('--max-distance', default=DEFAULT_INTERPOLATION_MAX_DISTANCE, show_default=True, help='Maximal distance (in meters) for points interpolation')
 @click.pass_context
 def interpolate(ctx, max_distance):
     print('number of points in track:', ctx.obj['points'][0].shape[0])
@@ -135,5 +138,56 @@ def match_tracks(geojson, html, log_level, tolerance, file1, file2):
             json_file.write(geojson) 
 
     match.get_track_ratios(matches)
+
+@root.group()
+def net():
+    """Geographic net tools"""
+
+@net.command("create")
+@click.argument('files', nargs=-1, type=click.Path())
+@click.option('--output', default='net', show_default=True, help='Filepath of generated output, e.g. net.html')
+@click.option('--output-format', default='-', show_default=True, help='Output format (-, html)')
+@click.option('--max-distance', default=DEFAULT_INTERPOLATION_MAX_DISTANCE, show_default=True, help='Maximal distance (in meters) for points interpolation')
+def net_create_cmd(files, output, output_format, max_distance):
+    """Creates network from gpx files"""
+
+    click.echo(f"Creating net from {len(files)} files'")
+
+    n = Net()
+    for filename in files:
+        click.echo(f'Adding {filename}')
+        with open(filename, 'r') as gpx_file:
+            gpx = gpxpy.parse(gpx_file)
+            points = match.points_from_gpx(gpx)
+
+            print('number of points in track:', points.shape[0])
+            points = interpolation.interpolate_distance(points, max_distance)
+            print('number of points in track after interpolation:', points.shape[0])
+
+            last_hull = None
+            for point in points:
+                last_hull = n.add_point(point, last_hull)
+
+    print('number of hulls in net:', len(n.hulls))
+    if output_format == 'html':
+        print('generating geojson content')
+        geojson_content = n.to_geojson()
+
+        tpl_path='templates/tpl_map.html'
+        print(f'generating html content from template {tpl_path}')
+        with open(tpl_path, 'r') as tpl_file:
+            tpl = string.Template(tpl_file.read())
+
+        html_content = tpl.substitute({
+            'title': 'Net',
+            'geojson': geojson_content
+        })
+
+        html_path = f'{output}.html'
+        print(f'writing html to {html_path}')
+        with open(html_path, 'w') as html_file:
+            html_file.write(html_content)
+
+
 if __name__ == '__main__':
     root()

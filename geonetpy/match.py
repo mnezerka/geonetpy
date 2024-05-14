@@ -1,5 +1,35 @@
 """
 Tools for matching (comparing) geographic tracks
+
+Issue 1 - scipy KD tree uses euclidean distance
+* https://stackoverflow.com/questions/49266244/kdtree-is-returning-points-outside-of-radius
+* https://pysal.org/libpysal/ -> possibility to use Arc + radius for KDTree
+* https://stackoverflow.com/questions/10549402/kdtree-for-longitude-latitude
+* https://scikit-learn.org/stable/modules/generated/sklearn.neighbors.BallTree.html#sklearn.neighbors.BallTree
+
+Tip with ball tree (note: Note this returns distances assuming a sphere of
+radius 1 - to get the distances on the earth multiply by radius = 6371km):
+```python
+from sklearn.neighbors import BallTree
+import numpy as np
+import pandas as pd
+
+cities = pd.DataFrame(data={
+    'name': [...],
+    'lat': [...],
+    'lon': [...]
+})
+
+query_lats = [...]
+query_lons = [...]
+
+bt = BallTree(np.deg2rad(cities[['lat', 'lon']].values), metric='haversine')
+distances, indices = bt.query(np.deg2rad(np.c_[query_lats, query_lons]))
+
+nearest_cities = cities['name'].iloc[indices]
+```
+
+
 """
 
 import json
@@ -42,6 +72,7 @@ def match(a, b, tolerance):
         logging.debug(f'{i}: {v}')
 
     tree = scipy.spatial.KDTree(all_points[:, :2])
+    #tree = pysal.cg.KDTree(all_points[:, :2], distance_metric='Arc', radius=pysal.cg.RADIUS_EARTH_MILES)
 
     # note: [:, :2] removes third coordinate (label/index)
     # find nearest points (circle is given by tolerance) around each of the points

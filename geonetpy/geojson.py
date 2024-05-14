@@ -4,6 +4,11 @@ Geojson tools
 
 import json
 
+def point_to_geojson(point):
+    """https://macwright.com/lonlat/"""
+    return [point[1], point[0]]
+
+
 def points_to_geojson(points, line=False):
     geos = []
 
