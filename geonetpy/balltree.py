@@ -1,5 +1,8 @@
 import math
+import logging
 from .geoutils import haversine_distance
+
+BALANCING_FACTOR = 100
 
 class BallTreeNode:
     def __init__(self, point, index):
@@ -71,13 +74,15 @@ class BallTree:
 
         # Rebuild the tree if it is unbalanced
         if self._is_unbalanced(node):
+            logging.info('balancing ball tree node, height: %d', self._height(node))
             points = self._collect_points(node)
             node = self.build_tree(points)
+            logging.info('node balancing done, height: %d', self._height(node))
 
         return node
 
     def _is_unbalanced(self, node):
-        return abs(self._height(node.left) - self._height(node.right)) > 1
+        return abs(self._height(node.left) - self._height(node.right)) > BALANCING_FACTOR
 
     def get_height(self):
         return self._height(self.root)
