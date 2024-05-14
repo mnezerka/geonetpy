@@ -1,4 +1,5 @@
 import logging
+import numpy as np
 from .geoutils import haversine_distance
 
 BALANCING_FACTOR = 150
@@ -97,7 +98,7 @@ class BallTree:
     def _collect_points(self, node):
         points = []
         self._collect_points_recursively(node, points)
-        return points
+        return np.array(points)
 
     def _collect_points_recursively(self, node, points):
         if not node:
@@ -106,13 +107,15 @@ class BallTree:
         points.append(node.point)
         self._collect_points_recursively(node.right, points)
 
+    # TODO: remove duplicates
     def get_points(self):
         points = []
         self._get_points(self.root, points)
         return points
 
+    # TODO: remove duplicates
     def _get_points(self, node, points):
         if node:
-            points.append(node.point)
             self._get_points(node.left, points)
+            points.append(node.point)
             self._get_points(node.right, points)
