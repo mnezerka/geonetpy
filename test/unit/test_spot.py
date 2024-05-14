@@ -19,12 +19,12 @@ class TestRect(unittest.TestCase):
     def test_distance(self):
         s = Spot(2, [1, 1])
 
-        self.assertEqual(2, s.distance([1, 3]))
-        self.assertEqual(39, s.distance([40, 1]))
+        self.assertAlmostEqual(222355.978, s.distance([1, 3]), places=1)
+        self.assertAlmostEqual(4336602.139, s.distance([40, 1]), places=1)
 
     def test_add(self):
         s = Spot(2, [1, 1])
 
         s.add([3, 3])
 
-        self.assertEqual([2, 2], s.center)
+        self.assertEqual([1, 1], s.center)

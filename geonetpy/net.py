@@ -1,16 +1,12 @@
 import json
 import logging
-from .geojson import point_to_geojson
-from .spot import Spot
-from .geoutils import haversine_distance
-from .balltree import BallTree
 import numpy as np
+from .geojson import point_to_geojson
+from .balltree import BallTree
 
 class Net:
     def __init__(self):
-        # self.spots = {}
-        # self.balltree = BallTree()
-        self.max_spot_distance = 15
+        self.max_spot_distance = 75
         self.last_id = 0
         self.edges = []
         self.balltree = None
@@ -86,7 +82,7 @@ class Net:
 
         # render points and build dict of points for searching
 
-        index = dict()
+        index = {}
 
         for point in points:
 

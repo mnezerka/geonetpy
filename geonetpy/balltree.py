@@ -1,8 +1,7 @@
-import math
 import logging
 from .geoutils import haversine_distance
 
-BALANCING_FACTOR = 100
+BALANCING_FACTOR = 150
 
 class BallTreeNode:
     def __init__(self, point, index):

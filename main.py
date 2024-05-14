@@ -2,6 +2,7 @@
 import sys
 import logging
 import string
+import time
 from functools import update_wrapper
 from geonetpy import match, interpolation, geojson
 from geonetpy.net import Net
@@ -154,8 +155,9 @@ def net_create_cmd(files, output, output_format, max_distance):
     click.echo(f"creating net from {len(files)} files'")
 
     n = Net()
+    counter = 1
     for filename in files:
-        click.echo(f'Adding {filename}')
+        click.echo(f'adding {filename} {counter}/{len(files)}')
         with open(filename, 'r') as gpx_file:
             gpx = gpxpy.parse(gpx_file)
             points = match.points_from_gpx(gpx)
@@ -166,10 +168,16 @@ def net_create_cmd(files, output, output_format, max_distance):
             print(f'adding {points.shape[0]} points to the net')
 
             last_spot = None
+            start = time.time()
             for point in points:
                 last_spot = n.add_point(point, last_spot)
 
-            print(f'stat of the net: {n.stat()}')
+        print(f'stat of the net: {n.stat()}')
+        end = time.time()
+        duration = end - start
+        print(f'duration: {duration}s, per point: {duration/len(points)}s')
+
+        counter += 1
 
     # print('number of spots in net:', len(n.spots))
     if output_format == 'html':

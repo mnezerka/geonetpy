@@ -12,7 +12,7 @@ class Spot:
         return haversine_distance(self.center, other)
 
     def add(self, point):
-        #self.center = get_centroid([self.center, point])
+        # self.center = get_centroid([self.center, point])
         return point
 
 def get_centroid(points):

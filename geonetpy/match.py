@@ -36,9 +36,7 @@ import json
 import logging
 import scipy.spatial
 import scipy.cluster.hierarchy
-import matplotlib.pyplot as plt
 import numpy as np
-import gpxpy.gpx
 from geopy import distance
 
 
@@ -49,8 +47,8 @@ def match(a, b, tolerance):
     points_b = np.vstack(np.asarray(b))
 
     all_tracks = [points_a, points_b]
-    logging.debug(f'shape a: {points_a.shape}')
-    logging.debug(f'shape b: {points_b.shape}')
+    logging.debug('shape a: %d', points_a.shape)
+    logging.debug('shape b: %d', points_b.shape)
 
     all_points = np.vstack([np.hstack([points, np.full((points.shape[0], 1), i)]) for i, points in enumerate(all_tracks)])
 
@@ -69,10 +67,10 @@ def match(a, b, tolerance):
 
     logging.debug('all_pts (ix: coordinates):')
     for i, v in enumerate(all_points):
-        logging.debug(f'{i}: {v}')
+        logging.debug('%d: %s', i, v)
 
     tree = scipy.spatial.KDTree(all_points[:, :2])
-    #tree = pysal.cg.KDTree(all_points[:, :2], distance_metric='Arc', radius=pysal.cg.RADIUS_EARTH_MILES)
+    # tree = pysal.cg.KDTree(all_points[:, :2], distance_metric='Arc', radius=pysal.cg.RADIUS_EARTH_MILES)
 
     # note: [:, :2] removes third coordinate (label/index)
     # find nearest points (circle is given by tolerance) around each of the points
@@ -80,7 +78,7 @@ def match(a, b, tolerance):
 
     logging.debug("points_within_tolerance (point ix -> ix of points in tolearance):")
     for i, v in enumerate(points_within_tolerance):
-        logging.debug(f'{i}: {v}')
+        logging.debug('%d: %s', i, v)
 
     # previous returns an array of the same length as the incoming points,
     # with each value in the array being a tuple of indexes of the found
@@ -95,14 +93,14 @@ def match(a, b, tolerance):
 
     logging.debug('matches (true if given point matches point in another track):')
     for i, v in enumerate(matches):
-        logging.debug(f'{i}: {v}')
+        logging.debug('%d: %s', i, v)
 
     # reduce all_points array to those who are True in matches array,
     # so the matching_points contain only points which match points in
     # second group (labeling/index coordinate is stripped -> :2)
     matching_points = all_points[matches, :2]
 
-    logging.debug(f'matchiing points: {matching_points}')
+    logging.debug('matchiing points: %s', matching_points)
 
     # if there are no points close to each other -> tracks are too far from each other
     if len(matching_points) > 0:
@@ -115,8 +113,8 @@ def match(a, b, tolerance):
         clusters = scipy.cluster.hierarchy.fclusterdata(matching_points, tolerance, 'distance')
     else:
         clusters = []
-        
-    logging.debug(f'clusters: {clusters}')
+
+    logging.debug('clusters: %s', clusters)
 
     # clusters is an array of the same length of your matched points containing
     # cluster indexes for each point. This means it's easy to get back a table
@@ -134,7 +132,7 @@ def match(a, b, tolerance):
     logging.debug('cluster_points:')
     logging.debug(cluster_points)
 
-    cluster_point_indexes = cluster_points[:,3]
+    cluster_point_indexes = cluster_points[:, 3]
 
     def get_point_with_cluster_info(p):
         # look for point in clusters
@@ -150,7 +148,7 @@ def match(a, b, tolerance):
     result = np.vstack([get_point_with_cluster_info(p) for p in all_points])
 
     logging.debug('result:')
-    # (x, y, track_id, index, cluster) 
+    # (x, y, track_id, index, cluster)
     logging.debug(result)
 
     return result
@@ -160,8 +158,8 @@ def get_track_ratios(matches):
 
     for track_ix in range(2):
         # prepare filter (boolean vector) to filter out current truack points
-        filter = [m[2] == track_ix for m in matches]
-        track_points = matches[filter]
+        tracks_filter = [m[2] == track_ix for m in matches]
+        track_points = matches[tracks_filter]
 
         dist_outside_cluster = 0    # distance outside of clusters
         dist_total = 0      # distance total
@@ -189,30 +187,6 @@ def get_track_ratios(matches):
         print(f'  distance outside of clusters: {format_distance_m(dist_outside_cluster)}')
         print(f'  match ratio:: {round(((dist_total - dist_outside_cluster) / dist_total * 100), 1)}%')
 
-# def draw(clusters, matching_points, all_tracks):
-def draw(matches):
-    """Draw results"""
-
-    #for clust_idx, colour in zip(set(clusters), cycle(['yellow', 'orange', 'pink'])):
-    #    plt.scatter(matching_points[clusters == clust_idx, 0], matching_points[clusters == clust_idx, 1], c=colour, s=200)
-
-    track_colors = ['blue', 'red']
-
-    cluster_colors = ['orange', 'yellow', 'pink']
-
-    #for pts, colour in zip(matches, cycle(['blue', 'red', 'orange', 'green', 'pink'])):
-    #    print('item', pts, colour)
-
-    for point in matches:
-
-        if point[4] != -1:
-            #plt.scatter(point[0], point[1], c=cluster_colors[int(point[4]) - 1], marker='o', s=200)
-            plt.scatter(point[0], point[1], c='yellow', marker='o', s=200)
-
-        plt.scatter(point[0], point[1], c=track_colors[int(point[2])], marker='+')
-
-    plt.show()
-
 def points_from_gpx(gpx):
     """point from gpx object"""
     points = []
@@ -232,9 +206,9 @@ def matches_to_geojson(matches):
 
     for track_ix in track_ids:
         # prepare filter (boolean vector) to filter out current truack points
-        filter = [m[2] == track_ix for m in matches]
-        track_points = matches[filter]
- 
+        track_filter = [m[2] == track_ix for m in matches]
+        track_points = matches[track_filter]
+
         poly = {
             'type': 'Feature',
             'properties': {
@@ -262,12 +236,12 @@ def matches_to_geojson(matches):
             geos.append(pt)
 
     # get unique cluster ids
-    cluster_ids = set([int(p[4]) for p in matches if p[4] != -1])
+    cluster_ids = {int(p[4]) for p in matches if p[4] != -1}
 
     for cluster_ix in cluster_ids:
         # prepare filter (boolean vector) to filter out current cluster points
-        filter = [m[4] == cluster_ix for m in matches]
-        cluster_points = matches[filter]
+        cluster_filter = [m[4] == cluster_ix for m in matches]
+        cluster_points = matches[cluster_filter]
         for cluster_pt in cluster_points:
 
             pt = {
@@ -287,14 +261,14 @@ def matches_to_geojson(matches):
         'features': geos,
     }
 
-    return(json.dumps(geometries, indent=4))
+    return json.dumps(geometries, indent=4)
 
 def format_distance_m(d):
     """format distance specified in meters"""
-    
+
     result = f'{round(d, 1)} m'
-    
+
     if d > 1000:
         result = f'{round(d/1000, 1)} km'
- 
+
     return result
