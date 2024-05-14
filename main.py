@@ -151,7 +151,7 @@ def net():
 def net_create_cmd(files, output, output_format, max_distance):
     """Creates network from gpx files"""
 
-    click.echo(f"Creating net from {len(files)} files'")
+    click.echo(f"creating net from {len(files)} files'")
 
     n = Net()
     for filename in files:
@@ -163,12 +163,15 @@ def net_create_cmd(files, output, output_format, max_distance):
             print('number of points in track:', points.shape[0])
             points = interpolation.interpolate_distance(points, max_distance)
             print('number of points in track after interpolation:', points.shape[0])
+            print(f'adding {points.shape[0]} points to the net')
 
             last_spot = None
             for point in points:
                 last_spot = n.add_point(point, last_spot)
 
-    print('number of spots in net:', len(n.spots))
+            print(f'stat of the net: {n.stat()}')
+
+    # print('number of spots in net:', len(n.spots))
     if output_format == 'html':
         print('generating geojson content')
         geojson_content = n.to_geojson()

@@ -102,6 +102,10 @@
                     opts.radius = 3
                     break;
             }
+
+            if (feature.properties.spot !== undefined) {
+                    opts.fillColor = 'red'
+            }
             return L.circleMarker(latlng, opts);
         }
 
