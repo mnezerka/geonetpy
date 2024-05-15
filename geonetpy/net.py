@@ -4,12 +4,18 @@ import numpy as np
 from .geojson import point_to_geojson
 from .balltree import BallTree
 
+def num2id(val):
+    return str(int(val))
+
 class Net:
     def __init__(self, points=None, edges=[]):
         self.max_spot_distance = 75
         self.last_id = 0
         self.edges = edges
+
+        # meta information
         self.meta = {}
+
         if points is not None:
             self.balltree = BallTree(points)
             logging.debug('created net from existing data, max spot distance: %i', self.max_spot_distance)
@@ -29,13 +35,13 @@ class Net:
     def get_edges(self):
         return self.edges
 
-    def get_id(self):
+    def generate_id(self):
         result = self.last_id
         self.last_id += 1
         return result
 
     def store_point(self, point):
-        point_id = self.get_id()
+        point_id = self.generate_id()
         point = np.array([point[0], point[1], point_id])
         logging.debug('storing point: %s', point)
 
@@ -44,8 +50,8 @@ class Net:
         else:
             self.balltree.add_point(point)
 
-        self.meta[point_id] = {
-            'quantity': 1
+        self.meta[num2id(point_id)] = {
+            'q': 1
         }
 
         return point
@@ -76,7 +82,7 @@ class Net:
             # NOTE: possibility to store meta information somewhere - we have
             # an id of the ball tree point in nearest[0][1][2] place
 
-            self.meta[final_point[2]]['quantity'] += 1
+            self.meta[num2id(final_point[2])]['q'] += 1
 
         else:
             #  no existing point was close enough -> create new one
@@ -93,59 +99,84 @@ class Net:
             if last_point_id != final_point_id:
                 # create edge with sorted point ids to avoid duplicates (reverse direction of track movement)
                 edge = (last_point_id, final_point_id) if last_point_id < final_point_id else (final_point_id, last_point_id)
-                # edge_id = f'{edge[0]}-{edge[1]}'
+                edge_id = f'{edge[0]}-{edge[1]}'
                 if edge in self.edges:
                     logging.debug('reusing existing edge: %s', edge)
-                    # self.meta[edge_id]['quantity'] += 1
+                    self.meta[edge_id]['q'] += 1
                 else:
                     logging.debug('adding edge: %s', edge)
                     self.store_edge(edge)
-                    # self.meta[edge_id] = {'quantity': 1}
+                    self.meta[edge_id] = {'q': 1}
 
         return final_point
 
-    def to_geojson(self):
+    def save(self, filepath):
+        content = {
+            'points': [[p[0], p[1], int(p[2])] for p in self.get_points()],
+            'edges': self.edges,
+            'meta': self.meta
+        }
+
+        with open(filepath, 'w') as json_file:
+            json.dump(content, json_file)
+
+    def load(self, filepath):
+
+        with open(filepath) as json_file:
+            data = json.load(json_file)
+            self.meta = data['meta']
+            self.edges = data['edges']
+            # set last_id to max of ids in points
+            self.balltree = BallTree(np.array(data['points']))
+
+    def to_geojson(self, show_points=True, show_edges=True):
         geos = []
 
         points = self.balltree.get_points()
 
-        # render points and build dict of points for searching
-
         index = {}
 
+        # render edges and build dict of points for searching
         for point in points:
 
-            pnt = {
-                'type': 'Feature',
-                'properties': {
-                    'spot': int(point[2])
-                },
-                'geometry': {
-                    'coordinates': point_to_geojson(point),
-                    'type': 'Point'
+            if show_points:
+                point_id = num2id(point[2])
+                point_meta = self.meta[point_id]
+
+                pnt = {
+                    'type': 'Feature',
+                    'properties': {
+                        'spot': point_id,
+                        'q': point_meta['q']
+                    },
+                    'geometry': {
+                        'coordinates': point_to_geojson(point),
+                        'type': 'Point'
+                    }
                 }
-            }
-            geos.append(pnt)
+                geos.append(pnt)
 
             index[int(point[2])] = point
 
         # render edges
-        # build dict of points for searching
-        for edge in self.edges:
-            p1 = index[edge[0]]
-            p2 = index[edge[1]]
+        if show_edges:
 
-            line = {
-                'type': 'Feature',
-                'properties': {
-                    'edge': f'{edge}'
-                },
-                'geometry': {
-                    'coordinates': [point_to_geojson(p1), point_to_geojson(p2)],
-                    'type': 'LineString'
+            for edge in self.edges:
+                p1 = index[edge[0]]
+                p2 = index[edge[1]]
+                edge_id = f'{edge[0]}-{edge[1]}'
+                line = {
+                    'type': 'Feature',
+                    'properties': {
+                        'edge': edge_id,
+                        'q': self.meta[edge_id]['q']
+                    },
+                    'geometry': {
+                        'coordinates': [point_to_geojson(p1), point_to_geojson(p2)],
+                        'type': 'LineString'
+                    }
                 }
-            }
-            geos.append(line)
+                geos.append(line)
 
         geometries = {
             'type': 'FeatureCollection',

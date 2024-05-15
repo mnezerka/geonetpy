@@ -87,7 +87,7 @@ def net():
 @net.command("create")
 @click.argument('files', nargs=-1, type=click.Path())
 @click.option('--output', default='net', show_default=True, help='File name for generated output (extension is added automaticaly, e.g. net.html)')
-@click.option('--output-format', default=['html'], type=click.Choice(['html', 'geojson', 'npz']), show_default=True, multiple=True, help='Output format')
+@click.option('--output-format', default=['html'], type=click.Choice(['html', 'geojson', 'gnt']), show_default=True, multiple=True, help='Output format')
 @click.option('--max-distance', default=DEFAULT_INTERPOLATION_MAX_DISTANCE, show_default=True, help='Maximal distance (in meters) for points interpolation')
 def net_create_cmd(files, output, output_format, max_distance):
     """Creates network from gpx files"""
@@ -148,28 +148,26 @@ def net_create_cmd(files, output, output_format, max_distance):
         with open(json_path, 'w') as json_file:
             json_file.write(geojson_content)
 
-    if 'npz' in output_format:
-        points = np.array(n.get_points())
-        edges = np.array(n.get_edges())
-        print(f'writing net to {output}.npz (points={len(points)} edges={len(edges)} meta={len(n.meta)})')
-        np.savez(output, points=points, edges=edges, meta=n.meta)
+    if 'gnt' in output_format:
+        gnt_path = f'{output}.gnt'
+        print(f'writing net to {gnt_path}')
+        n.save(gnt_path)
 
 
 @net.command("show")
 @click.argument('file', nargs=1, type=click.Path())
 @click.option('--output', default='net', show_default=True, help='File name for generated output (extension is added automaticaly, e.g. net.html)')
-def net_show_cmd(file, output):
+@click.option("--hide-points", is_flag=True, show_default=True, default=False, help="Show points.")
+def net_show_cmd(file, output, hide_points):
     """Reads and shows geo net loaded from npz file"""
 
     click.echo(f'loading net from {file}')
 
-    npzfile = np.load(file)
-    print(npzfile['meta'])
-
-    n = Net(npzfile['points'], npzfile['edges'])
+    n = Net()
+    n.load(file)
 
     print('generating geojson content')
-    geojson_content = n.to_geojson()
+    geojson_content = n.to_geojson(show_points=not hide_points)
 
     tpl_path = 'templates/tpl_map.html'
     print(f'generating html content from template {tpl_path}')

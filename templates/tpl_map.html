@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -72,6 +71,16 @@
                 return tstyle
             }
 
+            if (feature.properties.edge !== undefined) {
+                let tstyle = {
+                    weight: 1
+                }
+
+                if (feature.properties.q !== undefined) {
+                    tstyle.weight = feature.properties.q * 2
+                }
+                return tstyle
+            }
         }
 
         const clusterColors = [
@@ -87,6 +96,7 @@
         const pointToLayerFunc = function(feature, latlng) {
             opts = {}
             Object.assign(opts, geojsonMarkerOptions);
+
             if (feature.properties.cluster !== undefined) {
                 opts.color = clusterColors[feature.properties.cluster % clusterColors.length]
                 opts.fillColor = clusterColors[feature.properties.cluster % clusterColors.length]
@@ -105,6 +115,10 @@
 
             if (feature.properties.spot !== undefined) {
                     opts.fillColor = 'red'
+                    opts.radius = 3
+                /*if (feature.properties.q !== undefined) {
+                    opts.radius = 5 + feature.properties.q * 2
+                }*/
             }
             return L.circleMarker(latlng, opts);
         }
