@@ -151,9 +151,8 @@ def net_create_cmd(files, output, output_format, max_distance):
     if 'npz' in output_format:
         points = np.array(n.get_points())
         edges = np.array(n.get_edges())
-        print(f'writing net to {output}.npz (points={len(points)} edges={len(edges)})')
-
-        np.savez(output, points=points, edges=edges)
+        print(f'writing net to {output}.npz (points={len(points)} edges={len(edges)} meta={len(n.meta)})')
+        np.savez(output, points=points, edges=edges, meta=n.meta)
 
 
 @net.command("show")
@@ -165,6 +164,7 @@ def net_show_cmd(file, output):
     click.echo(f'loading net from {file}')
 
     npzfile = np.load(file)
+    print(npzfile['meta'])
 
     n = Net(npzfile['points'], npzfile['edges'])
 

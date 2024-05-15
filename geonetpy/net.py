@@ -9,6 +9,7 @@ class Net:
         self.max_spot_distance = 75
         self.last_id = 0
         self.edges = edges
+        self.meta = {}
         if points is not None:
             self.balltree = BallTree(points)
             logging.debug('created net from existing data, max spot distance: %i', self.max_spot_distance)
@@ -34,13 +35,18 @@ class Net:
         return result
 
     def store_point(self, point):
-        point = np.array([point[0], point[1], self.get_id()])
+        point_id = self.get_id()
+        point = np.array([point[0], point[1], point_id])
         logging.debug('storing point: %s', point)
 
         if self.balltree is None:
             self.balltree = BallTree(np.array([point]))
         else:
             self.balltree.add_point(point)
+
+        self.meta[point_id] = {
+            'quantity': 1
+        }
 
         return point
 
@@ -70,6 +76,8 @@ class Net:
             # NOTE: possibility to store meta information somewhere - we have
             # an id of the ball tree point in nearest[0][1][2] place
 
+            self.meta[final_point[2]]['quantity'] += 1
+
         else:
             #  no existing point was close enough -> create new one
 
@@ -78,13 +86,21 @@ class Net:
 
         # --------------------  edge processing
         if last_point is not None:
+            last_point_id = int(last_point[2])
+            final_point_id = int(final_point[2])
+
             # ignore self edges
-            if last_point[2] != final_point[2]:
-                edge = (last_point[2], final_point[2])
-                edge_reverse = (final_point[2], last_point[2])
-                if edge not in self.edges and edge_reverse not in self.edges:
+            if last_point_id != final_point_id:
+                # create edge with sorted point ids to avoid duplicates (reverse direction of track movement)
+                edge = (last_point_id, final_point_id) if last_point_id < final_point_id else (final_point_id, last_point_id)
+                # edge_id = f'{edge[0]}-{edge[1]}'
+                if edge in self.edges:
+                    logging.debug('reusing existing edge: %s', edge)
+                    # self.meta[edge_id]['quantity'] += 1
+                else:
                     logging.debug('adding edge: %s', edge)
                     self.store_edge(edge)
+                    # self.meta[edge_id] = {'quantity': 1}
 
         return final_point
 
