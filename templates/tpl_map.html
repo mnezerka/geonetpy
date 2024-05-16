@@ -33,6 +33,29 @@
     </script>
     <script>
 
+        function generateHeatmapColor(value, min, max) {
+            // Clamp the value between the min and max
+            value = Math.min(Math.max(value, min), max);
+
+            // Normalize the value between 0 and 1
+            var normalizedValue = (value - min) / (max - min);
+
+            // Interpolate between red and yellow
+            var red = 255;
+            var green = Math.round(255 * normalizedValue);
+            var blue = 0;
+
+            // Convert the RGB values to hexadecimal
+            var color = "#" + componentToHex(red) + componentToHex(green) + componentToHex(blue);
+
+            return color;
+        }
+
+        function componentToHex(c) {
+            var hex = c.toString(16);
+            return hex.length == 1 ? "0" + hex : hex;
+        }
+
         const map = L.map('map').setView([51.505, -0.09], 13);
 
         const tiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -77,7 +100,8 @@
                 }
 
                 if (feature.properties.q !== undefined) {
-                    tstyle.weight = feature.properties.q * 2
+                    tstyle.weight = 1 + feature.properties.q * 0.2
+                    tstyle.color = generateHeatmapColor(feature.properties.q, 1, 200)
                 }
                 return tstyle
             }

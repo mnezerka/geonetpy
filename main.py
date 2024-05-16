@@ -8,9 +8,13 @@ import click
 import numpy as np
 from geonetpy import match, interpolation, geojson
 from geonetpy.net import Net
+from geonetpy.netdb import NetDb
+from geonetpy.netmem import NetMem
 from geonetpy.geojson import tracks_to_geojson
 
 DEFAULT_INTERPOLATION_MAX_DISTANCE = 30
+
+DB_URI = 'mongodb://root:example@localhost:27017/'
 
 @click.group()
 @click.option('--log-level', default='INFO', help='Log level (DEBUG, INFO, ...)')
@@ -25,7 +29,8 @@ def tracks():
 @click.argument('files', nargs=-1, type=click.Path())
 @click.option('--output', default='tracks.html', show_default=True, help='Path to files to be generated, e.g. tracks.html')
 @click.option('--max-distance', default=DEFAULT_INTERPOLATION_MAX_DISTANCE, show_default=True, help='Maximal distance (in meters) for points interpolation')
-def cmd_tracks_html(files, output, max_distance):
+@click.option("--skip-interpolation", is_flag=True, show_default=False, default=False, help="Show points.")
+def cmd_tracks_html(files, output, max_distance, skip_interpolation):
 
     click.echo(f"rendering to html from {len(files)} files'")
 
@@ -36,8 +41,9 @@ def cmd_tracks_html(files, output, max_distance):
             gpx = gpxpy.parse(gpx_file)
             points = match.points_from_gpx(gpx)
             print('number of points in track:', points.shape[0])
-            points = interpolation.interpolate_distance(points, max_distance)
-            print('number of points in track after interpolation:', points.shape[0])
+            if not skip_interpolation:
+                points = interpolation.interpolate_distance(points, max_distance)
+                print('number of points in track after interpolation:', points.shape[0])
             all_tracks.append(points)
 
     geojson_content = geojson.tracks_to_geojson(all_tracks, lines=True)
@@ -89,12 +95,15 @@ def net():
 @click.option('--output', default='net', show_default=True, help='File name for generated output (extension is added automaticaly, e.g. net.html)')
 @click.option('--output-format', default=['html'], type=click.Choice(['html', 'geojson', 'gnt']), show_default=True, multiple=True, help='Output format')
 @click.option('--max-distance', default=DEFAULT_INTERPOLATION_MAX_DISTANCE, show_default=True, help='Maximal distance (in meters) for points interpolation')
-def net_create_cmd(files, output, output_format, max_distance):
+@click.option("--memory-net", is_flag=True, show_default=True, default=False, help="Use memory network instead of mongo database")
+def net_create_cmd(files, output, output_format, max_distance, memory_net):
     """Creates network from gpx files"""
 
     click.echo(f'creating net from {len(files)} files')
     click.echo(f'output format: {output_format}')
-    n = Net()
+
+    n = NetMem() if memory_net else NetDb(DB_URI)
+
     counter = 1
     for filename in files:
         click.echo(f'adding {filename} {counter}/{len(files)}')
@@ -163,7 +172,7 @@ def net_show_cmd(file, output, hide_points):
 
     click.echo(f'loading net from {file}')
 
-    n = Net()
+    n = NetMem()
     n.load(file)
 
     print('generating geojson content')
