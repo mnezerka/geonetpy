@@ -1,6 +1,5 @@
 import json
 import logging
-import numpy as np
 from .geojson import point_to_geojson
 from .balltree import BallTree
 
@@ -42,11 +41,11 @@ class Net:
 
     def store_point(self, point):
         point_id = self.generate_id()
-        point = np.array([point[0], point[1], point_id])
+        point = [point[0], point[1], point_id]
         logging.debug('storing point: %s', point)
 
         if self.balltree is None:
-            self.balltree = BallTree(np.array([point]))
+            self.balltree = BallTree([point])
         else:
             self.balltree.add_point(point)
 
@@ -127,7 +126,7 @@ class Net:
             self.meta = data['meta']
             self.edges = data['edges']
             # set last_id to max of ids in points
-            self.balltree = BallTree(np.array(data['points']))
+            self.balltree = BallTree(data['points'])
 
     def to_geojson(self, show_points=True, show_edges=True):
         geos = []

@@ -1,5 +1,4 @@
 import logging
-import numpy as np
 from .geoutils import haversine_distance
 
 BALANCING_FACTOR = 150
@@ -22,7 +21,8 @@ class BallTree:
         # find the median index and point based on latitude
 
         # sort by first coordinate
-        points = points[points[:, 0].argsort()]
+        # this is how to sort nupy array: points = points[points[:, 0].argsort()]
+        points = sorted(points, key=lambda x: x[0])
 
         median_index = len(points) // 2
         median_point = points[median_index]
@@ -98,7 +98,7 @@ class BallTree:
     def _collect_points(self, node):
         points = []
         self._collect_points_recursively(node, points)
-        return np.array(points)
+        return points
 
     def _collect_points_recursively(self, node, points):
         if not node:
