@@ -20,6 +20,7 @@ DB_URI = 'mongodb://root:example@localhost:27017/'
 @click.option('--log-level', default='INFO', help='Log level (DEBUG, INFO, ...)')
 def root(log_level):
     logging.basicConfig(stream=sys.stderr, level=log_level)
+    logging.getLogger('pymongo').setLevel(logging.ERROR)
 
 @root.group(chain=True)
 def tracks():
@@ -116,15 +117,9 @@ def net_create_cmd(files, output, output_format, max_distance, memory_net):
             print('number of points in track after interpolation:', points.shape[0])
             print(f'adding {points.shape[0]} points to the net')
 
-            last_spot = None
-            start = time.time()
-            for point in points:
-                last_spot = n.add_point(point, last_spot)
+            n.add_track(points, counter)
 
         print(f'stat of the net: {n.stat()}')
-        end = time.time()
-        duration = end - start
-        print(f'duration: {duration}s, per point: {duration/len(points)}s')
 
         counter += 1
 
@@ -172,7 +167,7 @@ def net_show_cmd(file, output, hide_points):
 
     click.echo(f'loading net from {file}')
 
-    n = NetMem()
+    n = NetDb(DB_URI)
     n.load(file)
 
     print('generating geojson content')
