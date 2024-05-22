@@ -1,5 +1,6 @@
 .venv
 examples
 __pycache__
-*html
-*gnt
+/*html
+/*gnt
+/*js
