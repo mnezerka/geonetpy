@@ -107,15 +107,5 @@ class BallTree:
         points.append(node.point)
         self._collect_points_recursively(node.right, points)
 
-    # TODO: remove duplicates
     def get_points(self):
-        points = []
-        self._get_points(self.root, points)
-        return points
-
-    # TODO: remove duplicates
-    def _get_points(self, node, points):
-        if node:
-            self._get_points(node.left, points)
-            points.append(node.point)
-            self._get_points(node.right, points)
+        return self._collect_points(self.root)

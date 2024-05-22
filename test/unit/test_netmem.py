@@ -1,6 +1,5 @@
 import unittest
-import numpy as np
-from geonetpy.net import Net
+from geonetpy.netmem import NetMem
 
 # sample points
 POINTS = [
@@ -11,10 +10,10 @@ POINTS = [
 ]
 
 
-class TestNet(unittest.TestCase):
+class TestNetMem(unittest.TestCase):
 
     def test_create(self):
 
-        Net()
+        NetMem()
 
-        Net(POINTS)
+        NetMem(POINTS)

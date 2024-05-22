@@ -7,10 +7,10 @@ def num2id(val):
     return str(int(val))
 
 class NetMem:
-    def __init__(self, points=None, edges=[]):
+    def __init__(self, points=None, edges=None):
         self.max_spot_distance = 75
         self.last_id = 0
-        self.edges = edges
+        self.edges = edges if edges is not None else []
 
         # meta information
         self.meta = {}
@@ -116,12 +116,12 @@ class NetMem:
             'meta': self.meta
         }
 
-        with open(filepath, 'w') as json_file:
+        with open(filepath, 'w', encoding='utf-8') as json_file:
             json.dump(content, json_file)
 
     def load(self, filepath):
 
-        with open(filepath) as json_file:
+        with open(filepath, encoding='utf-8') as json_file:
             data = json.load(json_file)
             self.meta = data['meta']
             self.edges = data['edges']

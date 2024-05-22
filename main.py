@@ -1,20 +1,33 @@
 #!/usr/bin/env python
+import os
 import sys
 import logging
 import string
-import time
 import gpxpy.gpx
 import click
-import numpy as np
 from geonetpy import match, interpolation, geojson
-from geonetpy.net import Net
 from geonetpy.netdb import NetDb
 from geonetpy.netmem import NetMem
-from geonetpy.geojson import tracks_to_geojson
 
 DEFAULT_INTERPOLATION_MAX_DISTANCE = 30
 
 DB_URI = 'mongodb://root:example@localhost:27017/'
+
+def change_file_extension(file_path, new_extension):
+    """
+    Changes the extension of a given file path to the new extension provided.
+
+    Parameters:
+    file_path (str): The original file path.
+    new_extension (str): The new extension to be applied.
+
+    Returns:
+    str: The file path with the new extension.
+    """
+    base_name = os.path.splitext(file_path)[0]
+    if not new_extension.startswith("."):
+        new_extension = "." + new_extension
+    return base_name + new_extension
 
 @click.group()
 @click.option('--log-level', default='INFO', help='Log level (DEBUG, INFO, ...)')
@@ -117,9 +130,7 @@ def net_create_cmd(files, output, output_format, max_distance, memory_net):
             print('number of points in track after interpolation:', points.shape[0])
             print(f'adding {points.shape[0]} points to the net')
 
-            n.add_track(points, counter)
-
-        print(f'stat of the net: {n.stat()}')
+            n.add_track(points, counter, {'name': os.path.basename(filename)})
 
         counter += 1
 
@@ -135,7 +146,8 @@ def net_create_cmd(files, output, output_format, max_distance, memory_net):
 
         html_content = tpl.substitute({
             'title': 'Net',
-            'geojson': geojson_content
+            'geojson': geojson_content,
+            'meta': {}
         })
 
         html_path = f'{output}.html'
@@ -173,14 +185,15 @@ def net_show_cmd(file, output, hide_points):
     print('generating geojson content')
     geojson_content = n.to_geojson(show_points=not hide_points)
 
-    tpl_path = 'templates/tpl_map.html'
+    tpl_path = 'templates/tpl_map_grid.html'
     print(f'generating html content from template {tpl_path}')
     with open(tpl_path, 'r') as tpl_file:
         tpl = string.Template(tpl_file.read())
 
     html_content = tpl.substitute({
         'title': 'Net',
-        'geojson': geojson_content
+        'geojson': geojson_content,
+        'meta': n.get_meta()
     })
 
     html_path = f'{output}.html'
@@ -188,6 +201,22 @@ def net_show_cmd(file, output, hide_points):
     with open(html_path, 'w') as html_file:
         html_file.write(html_content)
 
+@net.command("convert")
+@click.argument('file', nargs=1, type=click.Path())
+@click.option('--output', help='File name for generated output (extension is added automaticaly, e.g. net.js)')
+@click.option('--output-format', default='js', type=click.Choice(['js']), show_default=True, help='Output format')
+@click.option("--hide-points", is_flag=True, show_default=True, default=False, help="Skip all points.")
+def net_convert_cmd(file, output, output_format, hide_points):
+    """Converts geonet file to a different format"""
+
+    n = NetDb(DB_URI)
+
+    click.echo(f'loading net from {file} for convertion to {output_format} format')
+    n.load(file)
+
+    output = f'{output}.{output_format}' if output is not None else change_file_extension(file, output_format)
+
+    n.save(output, output_format, show_points=not hide_points)
 
 if __name__ == '__main__':
     root()

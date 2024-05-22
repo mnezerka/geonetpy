@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <base target="_top">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>$title</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <!-- <script type="text/javascript" src="https://unpkg.com/leaflet.vectorgrid@1.2.0"></script> -->
+    <script src="https://unpkg.com/leaflet.vectorgrid@latest/dist/Leaflet.VectorGrid.bundled.js"></script>
+
+    <style>
+        html, body {
+            height: 100%;
+            width: 100%;
+            margin: 0;
+        }
+        .leaflet-container {
+            height: 100%;
+            width: 100%;
+            max-width: 100%;
+            max-height: 100%;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="map" style="width: 100%; height: 100%;"></div>
+    <script>
+        const geojson=$geojson
+        const meta=$meta
+    </script>
+    <script>
+
+        function getGeoJsonBounds(geojson) {
+            var coords, bbox;
+
+            if (!geojson.hasOwnProperty('type')) return;
+
+            coords = dumpGeoJsonObjectCoordinates(geojson);
+
+            bbox = [
+                [Number.POSITIVE_INFINITY,Number.POSITIVE_INFINITY],
+                [Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY]
+            ];
+
+            return coords.reduce(function(prev, coord) {
+                return [
+                    [Math.min(coord[0], prev[0][0]), Math.min(coord[1], prev[0][1])],
+                    [Math.max(coord[0], prev[1][0]), Math.max(coord[1], prev[1][1])]
+                ];
+            }, bbox);
+        };
+
+        function dumpGeoJsonObjectCoordinates(obj) {
+            var coords;
+            if (obj.type == 'Point') {
+                coords = [obj.coordinates];
+            } else if (obj.type == 'LineString' || obj.type == 'MultiPoint') {
+                coords = obj.coordinates;
+            } else if (obj.type == 'Feature') {
+                coords = dumpGeoJsonObjectCoordinates(obj.geometry);
+            } else if (obj.type == 'FeatureCollection') {
+                coords = obj.features.reduce(function(dump, f) {
+                    return dump.concat(dumpGeoJsonObjectCoordinates(f));
+                },[]);
+            }
+
+            return coords;
+        }
+
+        function lat_lng_point_2_lng_lat(p) {
+            return [p[1], p[0]]
+        }
+
+        function lat_lng_rect_2_lng_lat(r) {
+            return[lat_lng_point_2_lng_lat(r[0]), lat_lng_point_2_lng_lat(r[1])]
+        }
+
+        function track_id_to_track_name(id) {
+            if (meta.tracks !== undefined) {
+                for (let i = 0; i < meta.tracks.length; i++) {
+                    if (meta.tracks[i].id == id) {
+                        return meta.tracks[i].name
+                        break;
+                    }
+                }
+            }
+            return 'track: ' + id
+        }
+
+        function get_edge_msg(obj) {
+            let msg = '';
+
+            if (obj.properties.edge !== undefined) {
+
+                msg = '<p>';
+
+                if (obj.properties.tracks !== undefined) {
+                    for (let i = 0; i < obj.properties.tracks.length; i++) {
+                        msg += track_id_to_track_name(obj.properties.tracks[i])
+                        msg += "<br>"
+                    }
+                }
+                msg += '</p>'
+            }
+
+            return msg
+        }
+
+        //const map = L.map('map').setView([51.505, -0.09], 13);
+        const map = L.map('map').setView([49.225741033, 16.533784967], 13);
+
+        const tiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        }).addTo(map);
+
+        const vectorGrid = L.vectorGrid.slicer(geojson, {
+            maxZoom: 18,
+            rendererFactory: L.svg.tile,
+            vectorTileLayerStyles: {
+                sliced: function(properties, zoom) {
+                    if (properties.edge !== undefined) {
+                        return {
+                            fillColor: 'red',
+                            fillOpacity: 1,
+                            stroke: true,
+                            fill: true,
+                            color: 'red',
+                            weight: 3,
+                        }
+                    }
+                    else if (properties.spot !== undefined) {
+                        return {
+                            color: 'blue',
+                            radius: 3,
+                        }
+
+                    }
+                }
+            },
+            interactive: true,
+            getFeatureId: function(f) {
+                return 'F';
+            }
+        })
+        .on('click', function(e) {    // The .on method attaches an event handler
+            L.popup()
+                //.setContent(e.layer.properties.name || e.layer.properties.type)
+                .setContent(get_edge_msg(e.layer))
+                .setLatLng(e.latlng)
+                .openOn(map);
+            L.DomEvent.stop(e);
+        })
+        .addTo(map);
+
+        //map.fitBounds(matchesLayer.getBounds())
+
+        const bounds = getGeoJsonBounds(geojson);
+        map.fitBounds(lat_lng_rect_2_lng_lat(bounds))
+
+    </script>
+</body>
+</html>

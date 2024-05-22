@@ -2,7 +2,6 @@ import json
 import logging
 from pymongo.mongo_client import MongoClient
 import pymongo
-from .net import Net
 
 def mongo_loc_to_point(loc):
 
@@ -12,9 +11,11 @@ def mongo_loc_to_point(loc):
 def remove_att_from_list(lst, att):
     return [{k: v for k, v in item.items() if k != att} for item in lst]
 
-class NetDb(Net):
+class NetDb:
     def __init__(self, uri):
-        super().__init__()
+
+        self.max_spot_distance = 75
+        self.last_id = 0
 
         self.uri = uri
         self.client = MongoClient(self.uri)
@@ -33,16 +34,24 @@ class NetDb(Net):
 
         print("Pinged your deployment. You successfully connected to MongoDB!")
 
-    def stat(self):
-        return 'netdb stat'
+    def generate_id(self):
+        result = self.last_id
+        self.last_id += 1
+        return result
 
-    def add_track(self, points, track_id):
-
-        logging.debug('registring new track: %s', track_id)
-        track = {
-            'id': track_id
+    def get_meta(self):
+        return {
+            'tracks': remove_att_from_list(self.db.tracks.find({}), "_id")
         }
-        self.db.tracks.insert_one(track)
+
+    def add_track(self, points, track_id, track_meta=None):
+
+        if track_meta is None:
+            track_meta = {}
+
+        logging.debug('registring new track: %s, %s', track_id, track_meta)
+        track_meta['id'] = track_id
+        self.db.tracks.insert_one(track_meta)
 
         last_point_id = None
         for point in points:
@@ -140,24 +149,38 @@ class NetDb(Net):
 
         return result
 
-    def save(self, filepath):
+    def save(self, filepath, output_format='gnt', show_points=True):
 
-        logging.info("saving net content to %s", filepath)
+        logging.info("saving net content to %s (output_format: %s)", filepath, output_format)
 
-        content = {
-            'points': remove_att_from_list(self.db.points.find({}), "_id"),
-            'edges': remove_att_from_list(self.db.edges.find({}), "_id"),
-            'tracks': remove_att_from_list(self.db.tracks.find({}), "_id")
-        }
+        if output_format == 'js':
+            content = {
+                'geojson': self.to_geojson(show_points=show_points),
+                'meta': {
+                    'tracks': remove_att_from_list(self.db.tracks.find({}), "_id")
+                }
+            }
 
-        with open(filepath, 'w') as json_file:
-            json.dump(content, json_file)
+            with open(filepath, 'w', encoding='utf-8') as output_file:
+                output_file.write('geonet=' + json.dumps(content, indent=4))
 
-        logging.info("saved (points: %d, edges: %d, tracks: %d)", len(content['points']), len(content['edges']), len(content['tracks']))
+            logging.info("saved")
+
+        else:
+            content = {
+                'points': remove_att_from_list(self.db.points.find({}), "_id"),
+                'edges': remove_att_from_list(self.db.edges.find({}), "_id"),
+                'tracks': remove_att_from_list(self.db.tracks.find({}), "_id")
+            }
+
+            with open(filepath, 'w', encoding='utf-8') as output_file:
+                json.dump(content, output_file)
+
+            logging.info("saved (points: %d, edges: %d, tracks: %d)", len(content['points']), len(content['edges']), len(content['tracks']))
 
     def load(self, filepath):
 
-        with open(filepath) as json_file:
+        with open(filepath, encoding='utf-8') as json_file:
 
             logging.info("loading net content from %s", filepath)
 
@@ -181,6 +204,16 @@ class NetDb(Net):
                 self.last_id = 0
 
             logging.debug('last index set to %d', self.last_id)
+
+    def simplify(self):
+
+        # reset process flag for each edge
+        self.db.edges.update({}, {'$set': {'proc': False}})
+
+        # loop over not processed edges
+        simplified = False
+        while not simplified:
+            pass
 
     def to_geojson(self, show_points=True, show_edges=True):
         geos = []
@@ -222,6 +255,7 @@ class NetDb(Net):
                     'type': 'Feature',
                     'properties': {
                         'edge': edge['index'],
+                        'tracks': edge['tracks'],
                         'q': edge['q']
                     },
                     'geometry': {
@@ -236,4 +270,5 @@ class NetDb(Net):
             'features': geos,
         }
 
-        return json.dumps(geometries, indent=4)
+        # return json.dumps(geometries, indent=4)
+        return geometries

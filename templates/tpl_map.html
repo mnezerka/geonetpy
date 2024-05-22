@@ -30,8 +30,21 @@
     <div id="map" style="width: 100%; height: 100%;"></div>
     <script>
         const geojson=$geojson
+        const meta=$meta
     </script>
     <script>
+
+        function track_id_to_track_name(id) {
+            if (meta.tracks !== undefined) {
+                for (let i = 0; i < meta.tracks.length; i++) {
+                    if (meta.tracks[i].id == id) {
+                        return meta.tracks[i].name
+                        break;
+                    }
+                }
+            }
+            return 'track: ' + id
+        }
 
         function generateHeatmapColor(value, min, max) {
             // Clamp the value between the min and max
@@ -147,7 +160,28 @@
             return L.circleMarker(latlng, opts);
         }
 
-        matchesLayer = L.geoJson(geojson, {style: styleFunc, pointToLayer: pointToLayerFunc}).addTo(map);
+        const onEachFeatureFunc = function (feature, latlng) {
+            let msg = '<p>';
+            if (feature.properties.tracks !== undefined) {
+                let tracks = feature.properties.tracks;
+                for (let i = 0; i < tracks.length; i++) {
+                    msg += track_id_to_track_name(tracks[i])
+                    msg += "<br>"
+                }
+            }
+            msg += '</p>'
+
+            latlng.bindPopup(msg);
+        }
+
+        matchesLayer = L.geoJson(
+            geojson,
+            {
+                style: styleFunc,
+                pointToLayer: pointToLayerFunc,
+                onEachFeature: onEachFeatureFunc
+            }).addTo(map);
+
         map.fitBounds(matchesLayer.getBounds())
 
     </script>
