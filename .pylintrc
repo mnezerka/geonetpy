@@ -6,6 +6,7 @@ disable=
     C0103, # invalid-name
     R0903, # too-few-public-methods
     R0914, # oo-many-locals
+    R0801, # duplicate-code
 
 [FORMAT]
 max-line-length=240
